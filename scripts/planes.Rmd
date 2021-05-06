@@ -48,7 +48,7 @@ library(lubridate)
 
 Today I'll tidy some data from [Hyperwar](https://www.ibiblio.org/hyperwar/AAF/StatDigest/aafsd-3.html), an
 archive of World War II primary source documents. The data are several tables of
-aircraft the Army Air Forces receieved each month, broken down by role and type.
+aircraft in Army Air Forces service each month of the war, broken down by role and type.
 Challenges include nested headers, blank rows, and several nasty OCR errors.
 ```{r}
 url <- "https://www.ibiblio.org/hyperwar/AAF/StatDigest/aafsd-3.html"
@@ -85,7 +85,8 @@ clean_hyperwar <- function(tab) {
         mutate(
           across(
             -c(Type, Category),
-            ~ str_replace_all(.x, c("-" = "0", "(\\d+,\\d{3})\\d"= "\\1", "," = "")) %>%
+            ~ str_replace_all(.x, c("-" = "0", "(\\d+,\\d{3})\\d"= "\\1",
+                                    "," = "")) %>%
               as.numeric()
           )
         ) %>%
@@ -103,17 +104,17 @@ clean_hyperwar <- function(tab) {
 ```
 
 
-Data in hand, I fill in missing combinations.
+Data in hand, I fill in missing combinations and recode an OCR glitch.
 ```{r}
 cleaned <- map(raw, clean_hyperwar) %>% 
   bind_rows() %>% 
-  mutate(`Month-Year` = my(paste(`Month-Year`))) %>% 
+  mutate(`Month-Year` = my(`Month-Year`),
+  Number = recode(Number, `7221` = 721)) %>% 
    complete(nesting(Category, Type), `Month-Year`, fill = list(Number = 0) )
   
 ```
 
-It seems trainers dominated acquisitions throughout the war, which makes sense.
-
+It seems trainers dominated inventory throughout the war, which makes sense.
 ```{r, message = FALSE}
 my_theme()
 
@@ -128,8 +129,8 @@ cleaned %>% group_by(`Month-Year`, Category) %>%
                      
 ```
 
-After filtering out trainers, it's clear fighters received surprisingly high emphasis even late in the war, when the 
-Allies enjoyed air supremacy. 
+After filtering out trainers, the rising share of fighters is evidence of the
+intensifying campaign for air superiority.
 ```{r, message=FALSE}
 cleaned %>% filter(Category != "Trainer") %>% 
   group_by(`Month-Year`, Category) %>% 
@@ -140,7 +141,7 @@ cleaned %>% filter(Category != "Trainer") %>%
   scale_x_date(breaks = my(breaks), labels = breaks, expand = c(0,0))
 ```
 
-I plot the top three types produced each month.
+I plot the top three types on hand each month.
 These plots reveal a shift from fighters to heavy bombers and transports midway
 through the war. There were initially some odd spikes I fixed by correcting OCR 
 errors.
@@ -193,4 +194,24 @@ plots <- top_types %>%
 
 walk(plots, print)
 ```
-
+This last plot shows the most-produced type each month, along with its proportion
+of total aircraft received. The steady rise in production is obvious, as is 
+the shift from fighters to heavy bombers.
+```{r}
+cleaned %>% group_by(`Month-Year`) %>% 
+  filter(Category != "Trainer" & !str_detect(Type, "2nd|Other|Liaison")) %>% 
+  mutate(Proportion  = Number / sum(Number)) %>% 
+  slice_max(n = 1, order_by = Number) %>% 
+    ungroup() %>% 
+    arrange(`Month-Year`) %>% 
+    mutate(Year = year(`Month-Year`), Month = month(`Month-Year`, label = TRUE),
+           Type = fct_recode(Type, "C-47" = "C-47, C-53")) %>% 
+  ggplot(aes(x = `Month-Year`, y = Number, color = Category, label = Type, size = Proportion)) +
+  geom_point() +
+  geom_text(size = 3, nudge_y = -200, color = "black", face= "bold") +
+  scale_size_continuous(labels = scales::percent_format()) +
+  scale_x_date(breaks = my(breaks), labels = breaks) +
+  theme(legend.position = "bottom",
+        legend.box.spacing = unit(0.05, "cm")) +
+  labs(title = "Most CommonType by Month")
+```
