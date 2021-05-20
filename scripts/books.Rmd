@@ -185,3 +185,6 @@ losses %>%
   labs(x = "", y = "", size = "Month Losses", title = "Composition of Losses by Year and Month")
            
 ```
+
+
+

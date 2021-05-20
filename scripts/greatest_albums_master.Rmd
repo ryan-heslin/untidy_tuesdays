@@ -39,17 +39,10 @@ knitr::opts_chunk$set(echo = TRUE, comment = "", fig.pos = "", warning = FALSE,
 
 library(tidyverse)
 library(rlang)
-library(rvest)
+library(rselenium)
 ```
 
 
-
-```{r}
-sel <- "#pmc-gallery-vertical p"
-url <- "https://www.rollingstone.com/music/music-lists/best-albums-of-all-time-1062063/"
-
-read_html(url) %>% 
-  html_elements(css = sel) %>%
-  html_text()
-
+```{r, child = c("greatest_albums_scrape.Rmd", greatest_albums_analysis.Rmd")}
 ```
+
