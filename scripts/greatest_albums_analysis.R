@@ -1,8 +1,6 @@
 load("../data/albums_scrape.Rdata")
 
-
 library(tidyverse)
-
 
 theme_standard <- ggplot2::theme(
   panel.background = element_blank(),
@@ -36,6 +34,7 @@ theme_standard <- ggplot2::theme(
   strip.text.y = element_text(color = "white")
 )
 ggplot2::theme_set(theme_standard)
+
 albums <- text_raw %>%
   map(bind_cols) %>%
   bind_rows() %>%
@@ -62,6 +61,9 @@ recodes <- exprs(
 )
 albums <- albums %>% mutate(year = case_when(!!!recodes))
 
+#' A major problem appears. 351 albums have rock listed as a genre, so that
+#' class is overwhelmingly predominant.
+sum(str_detect(albums$genre, "Rock"))
 
 #' Luckily, rank is a unique key, saving me a potentially nasty fuzzy join.
 genres <- genres %>% select(number, genre, subgenre) %>%
@@ -97,8 +99,7 @@ custom_stops = c(
   "hip",
   "hop",
   "",
-  unique(by_word$genre),
-  str_to_lower(genres$genre)
+  str_to_lower(unique(by_word$genre))
 )
 
 by_word <- by_word %>%
@@ -111,23 +112,29 @@ by_word <- by_word %>%
 #' Counting words, they overwhelmingly come from the rock genre.
 count(by_word, genre, sort = TRUE)
 
-count(by_word, word, genre, sort = TRUE)
+count(by_word, word, genre, sort = TRUE) %>% 
+  slice_head(n = 10)
 
 #'The most common words in each genre look as we'd expect, but some overlap.
 by_word %>% group_by(genre, word) %>%
   summarize(count = n()) %>%
   slice_max(order_by = count, n = 3) %>%
   filter(!genre %in% c("Classical", "Stage & Screen")) %>%
-  arrange(genre, -count)
+  arrange(genre, -count) %>% 
+  head(10)
 
+#' I drop uncommon genres and code each album as the first genre listed - arbitrary
+#' but consistent.
 drop_genres <-
-  c("Claasical", "Latin", "Stage & Screen", "Reggae", "Jazz")
+  c("Classical", "Latin", "Stage & Screen", "Reggae", "Jazz")
 word_genre <- by_word %>%
   filter(!genre %in% drop_genres) %>%
+  distinct(artist, album, word, .keep_all = TRUE) %>%
   add_count(genre, word) %>%
   filter(n > 4)
 
-
+#' The funk and hip-hop clusters are most apparent.
+library(ggrepel)
 word_genre %>% count(genre, word) %>%
   bind_tf_idf(term = word, document = genre, n = n) %>%
   ggplot(aes(
@@ -136,21 +143,24 @@ word_genre %>% count(genre, word) %>%
     label = word
   )) +
   geom_point(aes(color = genre)) +
-  geom_text()
+  geom_text_repel()
 
 
 library(topicmodels)
 
-
+#' To get a closer look at the structure of the data, I fit an LDA topic model with
+#' 8 topics, one for each genre of interest. The documents are the album descriptions.
 lda <-
   word_genre %>% cast_dtm(document = album,
                           term = word,
                           value = n) %>%
   LDA(k = 8)
 
+#' Plots show some topics seem to have captured most of one genre, but others are
+#' more dispersed (remember a document can contain multiple topics)
 pal <-
   RColorBrewer::brewer.pal(n_distinct(word_genre$genre), "Set3")
-tidy(lda, matrix = "gamma") %>%
+plots <- tidy(lda, matrix = "gamma") %>%
   left_join(distinct(word_genre, album, .keep_all = TRUE),
             by = c(document = "album")) %>%
   group_by(document) %>%
@@ -158,9 +168,8 @@ tidy(lda, matrix = "gamma") %>%
   ungroup() %>%
   mutate(genre = factor(genre)) %>%
   group_by(topic) %>%
-  group_map(
-    function(.x, .y){
-      counts <- unname(table(.x$genre))
+  group_map(function(.x, .y) {
+    counts <- unname(table(.x$genre))
     ggplot(.x, aes(
       x = fct_reorder(document, gamma),
       y = gamma,
@@ -170,26 +179,38 @@ tidy(lda, matrix = "gamma") %>%
       scale_color_manual(
         drop = FALSE,
         breaks = waiver(),
-        ,
         values = pal,
         labels = function(x)
           paste0(x, " (n = ", counts, ")")
       )  +
       coord_flip() +
-      labs(title = "Albums by Topic",  x = NULL, color = "Genre")
-    }, .keep = TRUE)
+      labs(title = paste("Albums in Topic", .y), x = NULL, color = "Genre") +
+      theme(axis.text.y = element_text(size = 7, face = "italic", hjust = 1), axis.ticks.y = element_blank(),
+            plot.margin = unit(rep(.5, 4), "cm"),)
+  }, .keep = TRUE)
 
-#' I try to fit a lasso model, useful here to filter irrelevant
+walk(plots, print)
+
+#' One topic per genre is probably too many, given the predominance of rock
+#' albums.
+enframe(get_topics(lda), name = "album", value = "topic") %>%
+  mutate(top_word = get_terms(lda)[match(topic, as.character(seq_along(get_terms(lda))))]) %>%
+  right_join(albums, by = "album") %>%
+  select(album, artist, genre, topic, top_word) %>% 
+  head(10)
+
+#' I next try to fit a lasso model, useful here to filter irrelevant
 #' predictors. Inspired by [this](https://www.youtube.com/watch?v=3PecUbnuYC4&t=6s)
 #' Tidy Tuesday screencast.
+#' 
+#' I'm not concerned with prediction and the data are sparse, so I don't create
+#' test and training sets.
 library(glmnet)
 
 set.seed(1111)
 sparse <- word_genre %>% cast_sparse(album, word, n)
 
 y <- word_genre$genre[match(rownames(sparse), word_genre$album)]
-
-#train <- sample(nrow(sparse), nrow(sparse)/5, replace = FALSE)
 
 mod <- cv.glmnet(sparse,
                  y,
@@ -202,9 +223,34 @@ plot(mod)
 #' The optimal value of lambda turn out to be:
 mod$lambda.min
 
+#' The deviance ratio (proportion of deviance) for the best model is pretty
+#' high, indicating we don't improve much on the null model. The highest
+#' coefficients, though,make sense, such as "motown" for funk.
 top_terms <- tidy(mod$glmnet.fit) %>% group_by(term) %>%
+  filter(lambda == mod$lambda.min) %>%
   slice_max(order_by = abs(estimate), n = 1) %>%
   ungroup() %>%
   arrange(-abs(estimate))
 
 head(top_terms, 15)
+
+#' The most striking associations are for hip-hop, with
+#' words like "beats", "jam", and "sample" that make sense.
+#' The words for rock, far and away the dominant genre, are
+#' less focused, and include some names.
+coef.glmnet(mod, s = mod$lambda.min) %>%
+  map_dfr(tidy, .id = "genre") %>%
+  arrange(-abs(value)) %>%
+  select(-column) %>% 
+  head(10)
+
+pred <- predict(mod, sparse, s = mod$lambda.min, type = "class")
+
+#' The model, which naturally classified most albums as rock, the dominant class,
+#' mostly misclassifies albums for which rock is a secodnary genre.
+tibble(pred = pred,
+       actual = y,
+       album = rownames(sparse)) %>%
+  right_join(albums, by = "album") %>%
+  filter(pred != actual) %>%
+  select(pred, actual, album, artist, subgenre) 

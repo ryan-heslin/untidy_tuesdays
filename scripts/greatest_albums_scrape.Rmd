@@ -1,65 +1,32 @@
----
-title: "Notes"
-author: "Ryan Heslin"
-date: "`r Sys.Date()`"
-output: pdf_document
----
 
- <!-- Standard custom LaTeX commands -->
-\newcommand{\abcd}{\begin{bmatrix}a&b\\
-c&d\end{bmatrix}}
-\newcommand{\m}[1]{\begin{bmatrix}#1\end{bmatrix}}
+# Scraping the Data
 
-\newcommand{\vect}[1]{\begin{pmatrix}#1\end{pmatrix}}
-
-\newcommand{\meq}[1]{\begin{split}#1\end{split}}
-
-\newcommand{\bym}[1]{#1\times{m}}
-
-\newcommand{\nby}[1]{n\times{#1}}
-
-\newcommand{\subsp}[2]{\Bigg\{\begin{bmatrix}#1\end{bmatrix}:#2\Bigg\}}
-
-\newcommand{\proj}[2]{\text{proj}_#1(#2)}
-
-\newcommand{\refl}[2]{\text{refl}_#1(#2)}
-
-\newcommand{\sumn}{\sum_{i=1}^n}
-
-<!-- % 1: term 1 -->
-<!-- % 2: subscript 1 -->
-<!-- % 3: term 2 -->
-<!-- % 4: subscript 2 -->
-<!-- % 5. operation -->
-\newcommand{\dotsn}[5]{#1_{1}#3_{1}#5{#1}_{2}#3_{2}{#5}\dots{#5}#1_{#2}#3_{#4}}
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, comment = "", fig.pos = "", warning = FALSE,
-                      tidy = TRUE, fig.align = "center")
-
-library(tidyverse)
-library(rlang)
-library(rvest)
-library(RSelenium)
+```{r, echo = FALSE}
+url <- "https://www.rollingstone.com/music/music-lists/500-greatest-albums-of-all-time-156826/"
 ```
 
-An immediate problem: there are three Greatest Hits albums and 
+Today I'll attempt to classify album genres using text analysis. The data
+come from [Rolling Stone's 2003 list](`r url`) of the "500 Greatest Albums of
+All time." The magazine released an updated list last year, possibly in response to persistent criticisms that it overrepresented male-dominated
+classic rock.
+
+I don't place too much stock in these kinds of rankings, but this one does provide
+an interesting web scraping and modeling challenge.
 ```{r}
 genres_raw <- read_csv("../data/albumlist.csv", locale = locale(encoding = "macroman"))
 genres_raw %>% count(Album,sort = TRUE) %>% 
   filter(n >1)
 ```
+
 It seems there are three Greatest Hits albums (not surprising) and a second
 _Let It Be_ (unexpected). Luckily, year is enough to distinguish them.
+
 ```{r}
 genres_raw %>% filter(Album %in% c("Greatest Hits", "Let It Be"))
 ```
 ```{r}
 genres <- rename_with(genres_raw, str_to_lower)
 ```
-
-
-
 
 acylam from the `discoRd` sever helped me configure the driver and suggested code for the page scraping.
 
@@ -68,7 +35,7 @@ container mapped to port 4445 by pasting this into a terminal:
 
 `docker run -d -p 4445:4444 selenium/standalone-firefox:2.53.1`
 
-```{r, results = "hide", cache = TRUE}
+```{r, results = "hide"}
 driver <- remoteDriver(remoteServerAddr = "localhost",
                port= 4445L,
                browserName="firefox")
@@ -77,7 +44,7 @@ driver$open()
 ```
 
 I define some functions to simplify scraping.
-```{r,c ache = TRUE}
+```{r, cache = TRUE}
 scrape_page <- function(driver,
                         url,
                         wait = 5L,
@@ -102,20 +69,19 @@ get_html_elements <- function(html, sel) {
   }
 ```
 
+```{r, cache = TRUE}
 
-```{r, chace = TRUE}
-
-driver$navigate("https://www.rollingstone.com/music/music-lists/500-greatest-albums-of-all-time-156826/")
+driver$navigate(url)
 links <- driver$getPageSource()[[1]] %>%
   read_html() %>%
   html_elements(css = "#pmc-gallery-list-nav-bar-render a") %>%
   html_attr("href")
 ```
 
-
-Some descriptions on a few pages don't have the vertical gallery class, reequiring me
+Some descriptions on a few pages don't have the vertical gallery class, requiring me
 to manually add another selector. Resolving this one special case took as much
 time as the rest of the script.
+
 ```{r, echo = FALSE}
 sel <-
   c(artist_album = ".c-gallery-vertical-album__title",
@@ -125,16 +91,14 @@ sel <-
 pages <- tibble(link = links, sel = list(sel))
 lapply(c(1, 3, 5), function(x) pages$sel[[x]][["description"]] <<-  paste(":nth-child(43) p ,", sel[["description"]]))
 pages$sel[[3]][["label_year"]] <- c(label_year = "#pmc-gallery-vertical p:nth-child(1) em:nth-child(1)")
-
-
 ```
 
-The actual scraping.
+The actual scraping. It takes a long time.
+
 ```{r, cache =TRUE}
 text_raw <- mapply(function(link, sel) scrape_page(driver, link, wait = 2.5, sel = sel), pages$link, pages$sel, SIMPLIFY = FALSE)
 ```
 
 ```{r}
 driver$close()
-save.image(file = "scrape.Rdata")
 ```

@@ -1,8 +1,11 @@
 ---
-title: "Notes"
+title: "Scraping Rolling Stone's 500 Greatest Albums List"
 author: "Ryan Heslin"
-date: "`r Sys.Date()`"
-output: pdf_document
+date: "`r format(Sys.Date(), '%B %d, %Y')`"
+output:
+  html_document:
+    highlight: "kate"
+    df_print: "kable"
 ---
 
  <!-- Standard custom LaTeX commands -->
@@ -39,10 +42,11 @@ knitr::opts_chunk$set(echo = TRUE, comment = "", fig.pos = "", warning = FALSE,
 
 library(tidyverse)
 library(rlang)
-library(rselenium)
+library(rvest)
+library(RSelenium)
 ```
 
 
-```{r, child = c("greatest_albums_scrape.Rmd", greatest_albums_analysis.Rmd")}
+```{r, child = c("greatest_albums_scrape.Rmd", "greatest_albums_analysis.Rmd")}
 ```
 
