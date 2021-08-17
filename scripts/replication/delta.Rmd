@@ -1,0 +1,203 @@
+---
+title: "Plot Replication"
+author: "Ryan Heslin"
+date: "`r format(Sys.Date(), '%B %d, %Y')`"
+output: 
+  pdf_document:
+    highlight: "kate"
+    df_print: "kable"
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(
+  echo = TRUE,
+  comment = "",
+  fig.pos = "",
+  warning = FALSE,
+  tidy = TRUE,
+  fig.align = "center",
+  highlight = TRUE
+)
+
+library(tidyverse)
+library(rlang)
+```
+
+Here I try to recreate the plot found (here)[https://www.nytimes.com/2021/07/30/health/cdc-vaccinated-delta.html] visualizing the infectiousness of the delta variant
+of COVID-19.
+```{r}
+library(dplyr)
+fake_data <- tibble(
+  virus = c(
+    "Bird flu",
+    "MERS",
+    "Ebola",
+    "SARS",
+    "Smallpox",
+    '1918 "Spanish" flu',
+    "Seasonal flu",
+    "2009 flu",
+    "Common cold",
+    "Polio",
+    "Chickenpox",
+    "Measles"
+  ),
+  fatality_rate = c(6, 35, 40, 9, 30, 2.8, .1, 0, 0, .05, 0, .2),
+  R_nought = c(0, .8, 2, 3, 4.6, 2, 1.5, 1.5, 2, 4, 8, 15)
+)
+
+```
+
+I correct the original's misspelling of "transmissible."
+```{r}
+library(ggplot2)
+library(ggrepel)
+
+segment_params <-
+  tibble(
+    x = c(12, 14.8),
+    xend = c(12, 15.2),
+    y = c(42, 1.25),
+    yend = c(60, 1.25)
+  )
+bold_ticks <- c(.1, 1, 10)
+tick_params <-
+  tibble(
+    y = c(seq(0, 1, .1), seq(2, 10), seq(20, 100, 10)),
+    yend = c(seq(0, 1, .1), seq(2, 10), seq(20, 100, 10)),
+    x = -.07,
+    xend = .1,
+  )
+ticks_color = if_else(tick_params$y %in% bold_ticks, "black", "#F2F5F3")
+hline_params <-
+  tibble(
+    x = -.1,
+    xend = 16,
+    y = c(10 ^ (-1:1)),
+    yend = y
+  )
+fake_data %>%
+  ggplot(aes(x = R_nought, y = fatality_rate)) +
+  geom_point(color = "#E8C711", size = 3) +
+  annotate(
+    geom = "label",
+    x = 2,
+    xend = 4,
+    y = 1,
+    yend = 1,
+    label = "Original\nversion of\ncoronavirus",
+    label.r = unit(.75, "lines"),
+    lineheight = .8,
+    hjust = 0,
+    fill = "#F2F5F3",
+    alpha = .3
+  ) +
+  annotate(
+    geom = "label",
+    x = 5,
+    xend = 9,
+    y = .5,
+    yend = 1.5,
+    label = "Delta variant\nMore transmissible\n than Ebola or smallpox,\nand as contagious as\nchickenpox",
+    label.r = unit(.75, "lines"),
+    linehieght = .8,
+    linetype = "dashed",
+    hjust = 0,
+    fill = "red",
+    alpha = .3
+  ) +
+  geom_text_repel(aes(label = virus),
+                  min.segment.length = Inf,
+                  box.padding = .2) +
+  geom_segment(
+    data = segment_params,
+    aes(
+      x = x,
+      y = y,
+      xend = xend,
+      yend = yend
+    ),
+    color = "black",
+    arrow = arrow(
+      type = "closed",
+      length = unit(.1, "inches"),
+      angle = 15
+    ),
+    arrow.fill = "black",
+    inherit.aes = FALSE
+  ) +
+  geom_segment(
+    data = hline_params,
+    aes_all(names(hline_params)),
+    color = "#C8C9CC",
+    inherit.aes = FALSE
+  ) +
+  geom_segment(data = tick_params,
+               aes(
+                 x = x,
+                 y = y,
+                 xend = xend,
+                 yend = yend
+               ),
+               color = ticks_color) +
+  annotate(
+    "text",
+    x = segment_params$x[1],
+    y = segment_params$y[1] - 10,
+    label = "More\n deadly",
+    lineheight = .8,
+    face = "bold"
+  ) +
+  annotate(
+    "text",
+    x = segment_params$x[2] - 1.5,
+    y = segment_params$y[2],
+    lineheight = 4,
+    face = "bold",
+    label = "More contagious"
+  ) +
+  scale_x_continuous(
+    breaks = c(0, 1, seq(5, 15, 5)),
+    minor_breaks = c(2:4, 6:9, 11:14, 16),
+    expand = expansion()
+  )  +
+  scale_y_continuous(
+    trans = "log10",
+    breaks = c(seq(0, 1, .1), seq(2, 10), seq(20, 100, 10)),
+    expand = expansion(),
+    labels = c(
+      "",
+      "0.1",
+      rep("", 8),
+      "1",
+      "2",
+      rep("", 2),
+      "5",
+      rep("", 4),
+      "10",
+      "20",
+      rep ("", 3),
+      "50",
+      rep("", 3),
+      "100%"
+    )
+  ) +
+  expand_limits(x = 16, y = c(-5, 100)) +
+  labs(title = "Fatality rate\n(log scale)", caption = "Average number of people infected by each sick person") +
+  theme(
+    panel.background = element_rect(fill = "white"),
+    panel.grid.major.x = element_line(color = "#C8C9CC"),
+    panel.grid.minor.y = element_blank(),
+    panel.grid.minor.x = element_line(color = "#F2F5F3"),
+    axis.line.y = element_blank(),
+    axis.line.x = element_line(color = "black"),
+    axis.title = element_blank(),
+    axis.ticks.x = element_line(color = "#F2F5F3"),
+    axis.ticks.y = element_blank(),
+    plot.title = element_text(size = 8, color = "#5F6361"),
+    plot.title.position = "plot",
+    plot.caption = element_text(color = "#5F6361", hjust = 0),
+  ) 
+```
+

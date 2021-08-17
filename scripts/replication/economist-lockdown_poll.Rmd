@@ -1,5 +1,5 @@
 ---
-title: "Notes"
+title: "Plot Replication"
 author: "Ryan Heslin"
 date: "`r format(Sys.Date(), '%B %d, %Y')`"
 output: 
@@ -59,7 +59,7 @@ library(tidyverse)
 library(rlang)
 ```
 
-
+This is an attempt to replicate the plot found (here)["https://www.economist.com/britain/2021/07/10/some-britons-crave-permanent-pandemic-lockdown"].
 ```{r}
 data <- tibble(
   question = factor(

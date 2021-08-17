@@ -148,7 +148,7 @@ losses %>%
               
 ```
 
-Auxiliaries dominated losses in 2942, while by 1945 the biggest category was minor combatants, exposed to constant attack at Iwo Jima and Okinawa.
+Auxiliaries dominated losses in 1942, while by 1945 the biggest category was minor combatants, exposed to constant attack at Iwo Jima and Okinawa.
 ```{r, fig.align='center'}
 losses %>% 
   mutate(Year = year(Date))  %>% 

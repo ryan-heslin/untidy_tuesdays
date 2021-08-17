@@ -94,17 +94,27 @@ faa_cleaned <- faa_cleaned %>%
 
 Now to actually plot the thing.
 ```{r}
-faa_cleaned %>% 
+p1 <- faa_cleaned %>%
   ggplot(aes(x = category, y = Licenses, fill = category)) +
   geom_col(position = "dodge") +
-  facet_wrap(~Region) +
-  theme(legend.position = "bottom", axis.text.x = element_blank(),
-        legend.text = element_text(size = 8), legend.title = element_blank(),
-        legend.background = element_rect(fill = "khaki4", color = "gray93"),
-        plot.background = element_rect(fill = "cadetblue3", color = "gold"),
-        strip.text = element_text(color = "white"), strip.background = element_rect(fill = "black"),
-        panel.background = element_rect(fill = "white")) +
+  facet_wrap(~ Region) +
+  theme(
+    legend.position = "bottom",
+    axis.text.x = element_blank(),
+    legend.text = element_text(size = 8),
+    legend.title = element_blank(),
+    legend.background = element_rect(fill = "khaki4", color = "gray93"),
+    plot.background = element_rect(fill = "cadetblue3", color = "gold"),
+    strip.text = element_text(color = "white"),
+    strip.background = element_rect(fill = "black"),
+    panel.background = element_rect(fill = "white")
+  ) +
+  scale_y_continuous(labels = scales::comma_format()) +
+  scale_fill_brewer(palette = "Set3") +
   labs(x = "Category", title = "2019 Pilots' Licenses by Region and Category") +
-  guides(fill = guide_legend(override.aes = list(color = "black")))
+  guides(fill = guide_legend(override.aes = list(color = "black"))) +
+  theme(plot.title.position = "plot")
+p1
+ggsave("faa1.png", plot = p1, path = "../outputs/plots")
 ```
 
