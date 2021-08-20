@@ -236,7 +236,7 @@ occupation %>%
     plot.title = element_text(hjust = .5, face = "bold")
   ) 
 
-ggsave("../outputs/dubois2.png")
+ggsave("dubois2.png", "../outputs/plots/")
 ```
 
 
