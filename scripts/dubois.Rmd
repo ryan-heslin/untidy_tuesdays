@@ -188,7 +188,7 @@ group_labs <-
     y = 1.1,
     label = c("NEGROES.", "WHITES.")
   )
-occupation %>%
+p2 <- occupation %>%
   ggplot(
     aes(
       x = Percentage,
@@ -236,7 +236,7 @@ occupation %>%
     plot.title = element_text(hjust = .5, face = "bold")
   ) 
 
-ggsave("dubois2.png", "../outputs/plots/")
+ggsave("dubois2.png", plot = p2, "../outputs/plots/")
 ```
 
 
