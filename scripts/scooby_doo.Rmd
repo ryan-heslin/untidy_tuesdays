@@ -63,7 +63,7 @@ theme_standard <- ggplot2::theme(
 ggplot2::theme_set(theme_standard)
 ```
 
-After skimming the variable list, my attention inevtiably lands on the `scrappy_doo` indicator. While I sadly am not versed in Scooby-Doo lore, I know Scrappy is widely disliked.
+After skimming the variable list, my attention inevitably lands on the `scrappy_doo` indicator. While I sadly am not versed in Scooby-Doo lore, I know Scrappy is widely disliked.
 
 
 ```{r}
@@ -77,9 +77,9 @@ Nonetheless, mean IMDB ratings for episodes with Scrappy are not significantly d
 t.test(imdb ~ scrappy_doo, data = scoobydoo)
 ```
 
-He appears in `round(mean(scoobydoo$scrappy_doo)) * 100`% of episodes.
+He appears in `r round(mean(scoobydoo$scrappy_doo, na.rm = TRUE) * 100)`% of episodes.
 
-To my surprise, there are `r sum(scoobydoo$monster_real)` episodes with a real monster.
+To my surprise, there are `r sum(scoobydoo$monster_real, na.rm = TRUE)` episodes with a real monster.
 
 The highest-rated episode is a crossover with _Supernatural_, which makes sense.
 ```{r}
@@ -89,13 +89,16 @@ arrange(scoobydoo, -imdb) |>
 ```
 
 Ratings seem constant over time, with the exception of a trough in the early 2000s.
-```{r}
+```{r, fig.with = 10, fig.height = 10}
 filter(scoobydoo, !season %in% c("Crossover", "Movie", "Special")) |>
-  mutate(season = fct_inorder(paste(series_name, " season", season))) |>
+  mutate(series_name = str_wrap(series_name, 15)) |>
   ggplot(aes(x = date_aired, y = imdb)) +
-  geom_line(aes(color = season, group = 1), show.legend = FALSE) +
+  geom_line(aes(color = season)) +
+  facet_wrap(. ~ series_name, scales = "free_x") +
+  scale_x_date(date_labels = "%b %Y") +
   labs(x = "Airdate", color = "Season", title = "IMDB Rating by Season") +
-  ylim(c(0, 10))
+  ylim(c(0, 10)) +
+  theme(axis.text.x = element_text(size = 6, angle = 45))
 ```
 
 The main story of this plot is that Shaggy really likes to say "Zoinks!" They also seem to have toned down the catchphrases in later seasons.
@@ -141,6 +144,7 @@ year_to_decade <- function(dates) {
     (function(x) x - x %% 10)() |>
     paste0("s")
 }
+# https://stackoverflow.com/questions/52403952/polar-plot-ggplot2-outer-ring-removed-grid-on-top
 scoobydoo <- scoobydoo |>
   mutate(
     decade = year_to_decade(date_aired),
@@ -148,8 +152,7 @@ scoobydoo <- scoobydoo |>
     motive = fct_lump_prop(motive, prop = .02)
   )
 
-decade_counts <- table(scoobydoo$decade)
-scoobydoo |>
+p <- scoobydoo |>
   filter(!is.na(motive), !is.na(date_aired)) |>
   group_by(decade) |>
   count(motive, name = "Proportion") |>
@@ -179,6 +182,8 @@ scoobydoo |>
     legend.key = element_rect(fill = "gray"),
     legend.background = element_rect(fill = "gray"),
     line = element_blank(),
+    panel.grid.major.x = element_blank(),
+    panel.border = element_blank(),
     plot.title = element_text(hjust = .5),
     plot.subtitle = element_text(hjust = .5)
   )
