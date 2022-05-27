@@ -191,7 +191,7 @@ filter(scoobydoo, !season %in% c("Crossover", "Movie", "Special")) |>
   theme(axis.text.x = element_text(size = 6, angle = 45))
 ```
 
-<img src="/home/rheslin/R/Projects/untidy_tuesdays/figure/scooby_doo//unnamed-chunk-5-1.png" style="display: block; margin: auto;" />
+<img src="../figure/scooby_doo//unnamed-chunk-5-1.png" style="display: block; margin: auto;" />
 
 The main story of this plot is that Shaggy really likes to say
 “Zoinks\!” They also seem to have toned down the catchphrases in
@@ -228,7 +228,7 @@ scoobydoo |>
   )
 ```
 
-<img src="/home/rheslin/R/Projects/untidy_tuesdays/figure/scooby_doo//unnamed-chunk-6-1.png" style="display: block; margin: auto;" />
+<img src="../figure/scooby_doo//unnamed-chunk-6-1.png" style="display: block; margin: auto;" />
 
 It seems that “competition” as a villain motive waxed and waned the most
 over time, peaking in the 1990s. An interesting direction for further
@@ -295,4 +295,11 @@ p + transition_states(decade,
   ggtitle(label = "Villain Motivations for {closest_state} Episodes", subtitle = paste("n = {scoobydoo |> filter(decade == closest_state)  |> pull(decade_count)  |> unique()}"))
 ```
 
-<img src="/home/rheslin/R/Projects/untidy_tuesdays/figure/scooby_doo//unnamed-chunk-7-1.gif" style="display: block; margin: auto;" />
+<img src="../figure/scooby_doo//unnamed-chunk-7-1.gif" style="display: block; margin: auto;" />
+
+> 
+> 
+> ``` 
+>                       close(con)
+>                     
+> ```

@@ -17,7 +17,13 @@ knitr::opts_chunk$set(
   echo = TRUE,
   comment = "",
   fig.pos = "",
-  fig.path = here::here("figure", tools::file_path_sans_ext(knitr::current_input()), "/"),
+  fig.path = file.path(
+    "../figure",
+    tools::file_path_sans_ext(
+      knitr::current_input()
+    ),
+    "/"
+  ),
   message = FALSE,
   tidy = "styler",
   warning = FALSE,
@@ -196,4 +202,7 @@ p + transition_states(decade,
   ggtitle(label = "Villain Motivations for {closest_state} Episodes", subtitle = paste("n = {scoobydoo |> filter(decade == closest_state)  |> pull(decade_count)  |> unique()}"))
 ```
 
-
+>                           close(con)
+>                         
+> 
+> 
