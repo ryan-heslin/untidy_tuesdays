@@ -6,13 +6,10 @@ header-includes:
   - \setlength{\parindent}{2em}
   - \setlength{\parskip}{2em}
 params:
-    title: "Notes"
+    title: "New York Times Bestsellers Analysis"
 output:
-  pdf_document:
-    highlight: "kate"
-    df_print: "kable"
-    includes:
-      in_header: "notes_text_preamble.tex"
+    github_document:
+      df_print: "kable"
 ---
 
 ```{r setup, include=FALSE}
@@ -20,6 +17,13 @@ knitr::opts_chunk$set(
   echo = TRUE,
   comment = "",
   fig.pos = "",
+  fig.path = file.path(
+    "../figure",
+    tools::file_path_sans_ext(
+      knitr::current_input()
+    ),
+    "/"
+  ),
   message = FALSE,
   tidy = "styler",
   warning = FALSE,

@@ -1,62 +1,53 @@
 ---
-title: "Tidying FAA Data"
+title: "`r params$title`"
 author: "Ryan Heslin"
-date: "`r  Sys.Date()`"
-output: html_document
+date: "`r format(Sys.Date(), '%B %e, %Y')`"
+header-includes:
+  - \setlength{\parindent}{2em}
+  - \setlength{\parskip}{2em}
+params:
+    title: "FAA Data Analysis"
+output:
+    github_document:
+      df_print: "kable"
 ---
 
- <!-- Standard custom LaTeX commands -->
-\newcommand{\abcd}{\begin{bmatrix}a&b\\
-c&d\end{bmatrix}}
-\newcommand{\m}[1]{\begin{bmatrix}#1\end{bmatrix}}
-
-\newcommand{\vect}[1]{\begin{pmatrix}#1\end{pmatrix}}
-
-\newcommand{\meq}[1]{\begin{split}#1\end{split}}
-
-\newcommand{\bym}[1]{#1\times{m}}
-
-\newcommand{\nby}[1]{n\times{#1}}
-
-\newcommand{\subsp}[2]{\Bigg\{\begin{bmatrix}#1\end{bmatrix}:#2\Bigg\}}
-
-\newcommand{\proj}[2]{\text{proj}_#1(#2)}
-
-\newcommand{\refl}[2]{\text{refl}_#1(#2)}
-
-\newcommand{\sumn}{\sum_{i=1}^n}
-
-<!-- % 1: term 1 -->
-<!-- % 2: subscript 1 -->
-<!-- % 3: term 2 -->
-<!-- % 4: subscript 2 -->
-<!-- % 5. operation -->
-\newcommand{\dotsn}[5]{#1_{1}#3_{1}#5{#1}_{2}#3_{2}{#5}\dots{#5}#1_{#2}#3_{#4}}
-
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, comment = "", fig.pos = "", warning = FALSE,
-                      tidy = TRUE, fig.align = "center")
-
-library(tidyverse)
-library(rlang)
+knitr::opts_chunk$set(
+  echo = TRUE,
+  comment = "",
+  fig.pos = "",
+  fig.path = file.path(
+    "../figure",
+    tools::file_path_sans_ext(
+      knitr::current_input()
+    ),
+    "/"
+  ),
+  message = FALSE,
+  tidy = "styler",
+  warning = FALSE,
+  fig.align = "center",
+  highlight = TRUE
+)
 ```
 
-This dataset is a nastily formatted .xslx table breaking down 2019 FAA pilot
+This dataset is a nastily formatted `.xslx` table breaking down 2019 FAA pilot
 licenses by region and type. To extract useful data, I'll have to remove useless
-rows and extract information from cell formattting.
+rows and extract information from cell formatting.
 ```{r}
+library(tidyverse)
 library(openxlsx)
 library(tidyxl)
 
-
 formats <- xlsx_formats("../data/faa.xlsx")$local$font$bold
-cells <-  xlsx_cells("../data/faa.xlsx") %>% 
-  filter(sheet=="Table 3" & str_detect(address, "^A")  & local_format_id %in% which(formats) & between(row, 8, 59))
+cells <- xlsx_cells("../data/faa.xlsx") %>%
+  filter(sheet == "Table 3" & str_detect(address, "^A") & local_format_id %in% which(formats) & between(row, 8, 59))
 ```
 
 The raw dataset.
 ```{r}
-faa_raw <- read.xlsx("https://www.faa.gov/data_research/aviation_data_statistics/civil_airmen_statistics/media/2019-civil-airmen-stats.xlsx", sheet =4,start = 6, na.strings = "N/Ap", cols = 1:11)
+faa_raw <- read.xlsx("https://www.faa.gov/data_research/aviation_data_statistics/civil_airmen_statistics/media/2019-civil-airmen-stats.xlsx", sheet = 4, startRow = 6, na.strings = "N/Ap", cols = 1:11)
 head(faa_raw)
 
 str(faa_raw)
@@ -66,29 +57,28 @@ The hardest part is to identify the cells of the first column with bold
 formatting, indicating categories. I do this using the openxlsx package, then 
 extract the category names from the relevant cells. That done, I use those
 cells to fill the rest of the column. For simplicity's sake, I don't 
-bother with subcateegoreis (e.g., commercial fixed-wing vs. helicopter licenses)
+bother with subcategories (e.g., commercial fixed-wing vs. helicopter licenses)
 
-After that, I clean up column names and delete an uneccesary row.
+After that, I clean up column names and delete an unnecessary row.
 ```{r}
-faa_cleaned <- faa_raw[1:53,] %>% 
-mutate(category = NA_character_)
-faa_cleaned[cells$row - 6, "category"] <- str_remove(cells$character, "\\s\\d.*|\\s?-.*") %>% 
+faa_cleaned <- faa_raw[1:53, ] %>%
+  mutate(category = NA_character_)
+faa_cleaned[cells$row - 6, "category"] <- str_remove(cells$character, "\\s\\d.*|\\s?-.*") %>%
   str_trim()
 
-faa_cleaned <- faa_cleaned %>% fill(category, .direction = "down") %>% 
-  rename_with(~str_to_lower(.x) %>% 
-                str_replace_all("-?\\.", "_") %>% 
-                str_remove_all("_[^a-zA-Z]+")
-                ) %>% 
-  filter(!str_detect(class_of_certificate, "Total|^Airplane")) %>% 
+faa_cleaned <- faa_cleaned %>%
+  fill(category, .direction = "down") %>%
+  rename_with(~ str_to_lower(.x) %>%
+    str_replace_all("-?\\.", "_") %>%
+    str_remove_all("_[^a-zA-Z]+")) %>%
+  filter(!str_detect(class_of_certificate, "Total|^Airplane")) %>%
   mutate(str_remove(category, "\\sCetificates"))
-
 ```
 
 From then on it's an easy pivoting job. 
 ```{r}
-faa_cleaned <- faa_cleaned %>% 
-  select(-total) %>% 
+faa_cleaned <- faa_cleaned %>%
+  select(-total) %>%
   pivot_longer(cols = alaskan:outside_u_s, names_to = "Region", values_to = "Licenses")
 ```
 
@@ -97,7 +87,7 @@ Now to actually plot the thing.
 p1 <- faa_cleaned %>%
   ggplot(aes(x = category, y = Licenses, fill = category)) +
   geom_col(position = "dodge") +
-  facet_wrap(~ Region) +
+  facet_wrap(~Region) +
   theme(
     legend.position = "bottom",
     axis.text.x = element_blank(),
@@ -117,4 +107,3 @@ p1 <- faa_cleaned %>%
 p1
 ggsave("faa1.png", plot = p1, path = "../outputs/plots")
 ```
-

@@ -37,7 +37,7 @@ library(tidyverse)
 I was scanning the Tidy Tuesday repo for interesting topics, and I couldn't resist Scooby-Doo.
 ```{r}
 scoobydoo <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-07-13/scoobydoo.csv", na = "NULL")
-glimpse(scoobydoo)
+str(scoobydoo)
 theme_standard <- ggplot2::theme(
   panel.background = element_blank(),
   panel.border = element_rect(color = "black", fill = NA),
