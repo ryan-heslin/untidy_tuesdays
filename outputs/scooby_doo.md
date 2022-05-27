@@ -1,83 +1,11 @@
-Scooby Doo Analysis
+Scooby-Doo Analysis
 ================
 Ryan Heslin
 May 27, 2022
 
-\newcommand{\abcd}{\begin{bmatrix}a&b\\
-c&d\end{bmatrix}}
 
-\newcommand{\m}[1]{\begin{bmatrix}#1\end{bmatrix}}
 
-\newcommand{\vect}[1]{\begin{pmatrix}#1\end{pmatrix}}
 
-\newcommand{\meq}[1]{\begin{split}#1\end{split}}
-
-% Set indent
-\setlength\textwidth{5cm}
-\setlength\parindent{15pt}
-
-%Bolds capital letters in math environments. See
-%https://tex.stackexchange.com/questions/397723/how-to-automatic-mathbold-all-capital-letters
-%\DeclareSymbolFont{bfletters}{OT1}{cmr}{bx}{n}
-%\DeclareSymbolFontAlphabet{\mathbf}{bfletters}
-%
-%\newcommand{\bfAZ}{
-%\DeclareMathSymbol{A}{\mathalpha}{bfletters}{`A}
-%\DeclareMathSymbol{B}{\mathalpha}{bfletters}{`B}
-%\DeclareMathSymbol{C}{\mathalpha}{bfletters}{`C}
-%\DeclareMathSymbol{D}{\mathalpha}{bfletters}{`D}
-%\DeclareMathSymbol{E}{\mathalpha}{bfletters}{`E}
-%\DeclareMathSymbol{F}{\mathalpha}{bfletters}{`F}
-%\DeclareMathSymbol{G}{\mathalpha}{bfletters}{`G}
-%\DeclareMathSymbol{H}{\mathalpha}{bfletters}{`H}
-%\DeclareMathSymbol{I}{\mathalpha}{bfletters}{`I}
-%\DeclareMathSymbol{J}{\mathalpha}{bfletters}{`J}
-%\DeclareMathSymbol{K}{\mathalpha}{bfletters}{`K}
-%\DeclareMathSymbol{L}{\mathalpha}{bfletters}{`L}
-%\DeclareMathSymbol{M}{\mathalpha}{bfletters}{`M}
-%\DeclareMathSymbol{N}{\mathalpha}{bfletters}{`N}
-%\DeclareMathSymbol{O}{\mathalpha}{bfletters}{`O}
-%\DeclareMathSymbol{P}{\mathalpha}{bfletters}{`P}
-%\DeclareMathSymbol{Q}{\mathalpha}{bfletters}{`Q}
-%\DeclareMathSymbol{R}{\mathalpha}{bfletters}{`R}
-%\DeclareMathSymbol{S}{\mathalpha}{bfletters}{`S}
-%\DeclareMathSymbol{T}{\mathalpha}{bfletters}{`T}
-%\DeclareMathSymbol{U}{\mathalpha}{bfletters}{`U}
-%\DeclareMathSymbol{V}{\mathalpha}{bfletters}{`V}
-%\DeclareMathSymbol{W}{\mathalpha}{bfletters}{`W}
-%\DeclareMathSymbol{X}{\mathalpha}{bfletters}{`X}
-%\DeclareMathSymbol{Y}{\mathalpha}{bfletters}{`Y}
-%\DeclareMathSymbol{Z}{\mathalpha}{bfletters}{`Z}
-%}
-%
-%\newcommand{\itAZ}{
-%\DeclareMathSymbol{A}{\mathalpha}{letters}{`A}
-%\DeclareMathSymbol{B}{\mathalpha}{letters}{`B}
-%\DeclareMathSymbol{C}{\mathalpha}{letters}{`C}
-%\DeclareMathSymbol{D}{\mathalpha}{letters}{`D}
-%\DeclareMathSymbol{E}{\mathalpha}{letters}{`E}
-%\DeclareMathSymbol{F}{\mathalpha}{letters}{`F}
-%\DeclareMathSymbol{G}{\mathalpha}{letters}{`G}
-%\DeclareMathSymbol{H}{\mathalpha}{letters}{`H}
-%\DeclareMathSymbol{I}{\mathalpha}{letters}{`I}
-%\DeclareMathSymbol{J}{\mathalpha}{letters}{`J}
-%\DeclareMathSymbol{K}{\mathalpha}{letters}{`K}
-%\DeclareMathSymbol{L}{\mathalpha}{letters}{`L}
-%\DeclareMathSymbol{M}{\mathalpha}{letters}{`M}
-%\DeclareMathSymbol{N}{\mathalpha}{letters}{`N}
-%\DeclareMathSymbol{O}{\mathalpha}{letters}{`O}
-%\DeclareMathSymbol{P}{\mathalpha}{letters}{`P}
-%\DeclareMathSymbol{Q}{\mathalpha}{letters}{`Q}
-%\DeclareMathSymbol{R}{\mathalpha}{letters}{`R}
-%\DeclareMathSymbol{S}{\mathalpha}{letters}{`S}
-%\DeclareMathSymbol{T}{\mathalpha}{letters}{`T}
-%\DeclareMathSymbol{U}{\mathalpha}{letters}{`U}
-%\DeclareMathSymbol{V}{\mathalpha}{letters}{`V}
-%\DeclareMathSymbol{W}{\mathalpha}{letters}{`W}
-%\DeclareMathSymbol{X}{\mathalpha}{letters}{`X}
-%\DeclareMathSymbol{Y}{\mathalpha}{letters}{`Y}
-%\DeclareMathSymbol{Z}{\mathalpha}{letters}{`Z}
-%}
 
 I was scanning the Tidy Tuesday repo for interesting topics, and I
 couldn’t resist Scooby-Doo.
@@ -263,7 +191,7 @@ filter(scoobydoo, !season %in% c("Crossover", "Movie", "Special")) |>
   theme(axis.text.x = element_text(size = 6, angle = 45))
 ```
 
-<img src="/home/rheslin/R/Projects/untidy_tuesdays/outputs/scooby_doo_files/figure-gfm/unnamed-chunk-5-1.png" style="display: block; margin: auto;" />
+<img src="/home/rheslin/R/Projects/untidy_tuesdays/figure/scooby_doo//unnamed-chunk-5-1.png" style="display: block; margin: auto;" />
 
 The main story of this plot is that Shaggy really likes to say
 “Zoinks\!” They also seem to have toned down the catchphrases in
@@ -300,7 +228,7 @@ scoobydoo |>
   )
 ```
 
-<img src="/home/rheslin/R/Projects/untidy_tuesdays/outputs/scooby_doo_files/figure-gfm/unnamed-chunk-6-1.png" style="display: block; margin: auto;" />
+<img src="/home/rheslin/R/Projects/untidy_tuesdays/figure/scooby_doo//unnamed-chunk-6-1.png" style="display: block; margin: auto;" />
 
 It seems that “competition” as a villain motive waxed and waned the most
 over time, peaking in the 1990s. An interesting direction for further
@@ -367,4 +295,4 @@ p + transition_states(decade,
   ggtitle(label = "Villain Motivations for {closest_state} Episodes", subtitle = paste("n = {scoobydoo |> filter(decade == closest_state)  |> pull(decade_count)  |> unique()}"))
 ```
 
-<img src="/home/rheslin/R/Projects/untidy_tuesdays/outputs/scooby_doo_files/figure-gfm/unnamed-chunk-7-1.gif" style="display: block; margin: auto;" />
+<img src="/home/rheslin/R/Projects/untidy_tuesdays/figure/scooby_doo//unnamed-chunk-7-1.gif" style="display: block; margin: auto;" />

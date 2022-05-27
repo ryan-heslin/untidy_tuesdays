@@ -1,5 +1,5 @@
 ---
-title: "Scooby Doo Analysis"
+title: "`r params$title`"
 author: "Ryan Heslin"
 date: "`r format(Sys.Date(), '%B %e, %Y')`"
 header-includes:
@@ -8,8 +8,8 @@ header-includes:
 output:
   github_document:
     df_print: "kable"
-    includes:
-      in_header: "notes_text_preamble.tex"
+params:
+  title: "Scooby-Doo Analysis"
 ---
 
 ```{r setup, include=FALSE}
@@ -17,6 +17,7 @@ knitr::opts_chunk$set(
   echo = TRUE,
   comment = "",
   fig.pos = "",
+  fig.path = here::here("figure", tools::file_path_sans_ext(knitr::current_input()), "/"),
   message = FALSE,
   tidy = "styler",
   warning = FALSE,
