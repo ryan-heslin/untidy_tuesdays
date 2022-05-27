@@ -6,7 +6,8 @@ header-includes:
   - \setlength{\parindent}{2em}
   - \setlength{\parskip}{2em}
 output:
-  pdf_document:
+  html_document:
+    keep_md: true
     highlight: "kate"
     df_print: "kable"
     includes:

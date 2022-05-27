@@ -1,0 +1,170 @@
+---
+title: "`r params$title`"
+author: "Ryan Heslin"
+date: "`r format(Sys.Date(), '%B %e, %Y')`"
+header-includes:
+  - \setlength{\parindent}{2em}
+  - \setlength{\parskip}{2em}
+params:
+    title: "Notes"
+output:
+  pdf_document:
+    highlight: "kate"
+    df_print: "kable"
+    includes:
+      in_header: "notes_text_preamble.tex"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  comment = "",
+  fig.pos = "",
+  message = FALSE,
+  tidy = "styler",
+  warning = FALSE,
+  fig.align = "center",
+  highlight = TRUE
+)
+```
+
+```{r}
+library(tidyverse)
+
+nyt_titles <- read_tsv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-05-10/nyt_titles.tsv")
+nyt_full <- read_tsv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-05-10/nyt_full.tsv")
+```
+
+# Largest Rank Gaps 
+
+Which books had the longest gaps between 
+debt rank and best rank?
+```{r}
+nyt_full |>
+  group_by(title_id, title) |>
+  summarize(
+    rank_change = max(rank) - rank[which.min(week)],
+    duration = cut(n(),
+      breaks = c(0:9, seq(10, 100, by = 10), Inf),
+      labels = as.character(
+        c(
+          1:10, paste(seq(10, 90, by = 10), seq(20, 100, by = 10), sep = "-"),
+          "100+"
+        )
+      ),
+      right = TRUE
+    )
+  ) |>
+  ggplot(aes(x = rank_change)) +
+  geom_bar(aes(fill = duration))
+```
+
+# Longest Reigns
+
+Which books had the longest reigns?
+Most are familiar, but a few have been forgotten. _The Robe_'s reign was not contiguous. 
+```{r}
+nyt_full |>
+  group_by(title) |>
+  summarize(length = n(), entrance = min(week), exit = max(week)) |>
+  slice_max(n = 10, order_by = length)
+```
+
+So which had the longest contiguous reigns?
+```{r}
+nyt_full |>
+  group_by(title) |>
+  summarize(longest_streak = with(rle(
+    seq.Date(
+      min(week),
+      max(week),
+      by = "weeks"
+    ) %in%
+      week
+  ), max(lengths[values]))) |>
+  slice_max(n = 10, order_by = longest_streak)
+```
+
+# Most Represented Authors
+
+Checking the most represented authors turns 
+up some of the usual suspects. 
+```{r}
+top_authors <- nyt_full |>
+  distinct(title_id, .keep_all = TRUE) |>
+  mutate(author = str_remove(author, "^.\\sby\\s")) |>
+  count(author) |>
+  slice_max(n = 10, order_by = n)
+
+top_authors
+```
+
+
+```{r}
+nyt_full |>
+  filter(author %in% top_authors[["author"]]) |>
+  ggplot(aes(x = week, y = rank, color = author)) +
+  geom_line(aes(group = as.factor(title_id))) +
+  facet_wrap(. ~ author, ncol = 2) +
+  theme(legend.position = "bottom")
+```
+
+# Title Worlds
+
+The most common title words paint something of a grim picture.
+```{r}
+library(tidytext)
+
+top_words <- nyt_full |>
+  distinct(title_id, .keep_all = TRUE) |>
+  unnest_tokens(word, title) |>
+  anti_join(stop_words, by = "word")
+
+top_words |>
+  count(word) |>
+  arrange(desc(n))
+```
+
+
+```{r}
+top_words |>
+  semi_join(top_authors,
+    by = "author"
+  )
+```
+
+
+```{r}
+author_words <- top_words |>
+  group_by(author) |>
+  summarize(word = paste(word, collapse = " "))
+```
+
+
+```{r}
+library(quanteda)
+DFM <- tokens(author_words[["word"]]) |>
+  setNames(author_words[["author"]]) |>
+  dfm() |>
+  dfm_tfidf(scheme_tf = "prop", base = exp(1))
+```
+
+Tf-idfs aren't as distinctive as I hoped for every author, but some are instantly recognizable.
+```{r}
+tidy(DFM) |>
+  rename(author = document) |>
+  mutate(author = str_remove(author, "^.\\sby\\s")) |>
+  filter(author %in% top_authors[["author"]]) |>
+  group_by(author) |>
+  slice_max(n = 10, order_by = count, with_ties = FALSE) |>
+  mutate(term = fct_rev(reorder_within(term, count, author, FUN = mean))) |>
+  ggplot(aes(x = term, y = count, fill = term)) +
+  geom_col() +
+  scale_x_reordered() +
+  facet_wrap(. ~ author, ncol = 2, scales = "free") +
+  labs(y = "Log tf-idf") +
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(angle = 45, size = 9)
+  )
+```
