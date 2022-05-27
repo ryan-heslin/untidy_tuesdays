@@ -6,9 +6,7 @@ header-includes:
   - \setlength{\parindent}{2em}
   - \setlength{\parskip}{2em}
 output:
-  html_document:
-    keep_md: true
-    highlight: "kate"
+  github_document:
     df_print: "kable"
     includes:
       in_header: "notes_text_preamble.tex"
