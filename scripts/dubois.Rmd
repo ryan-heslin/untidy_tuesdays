@@ -1,70 +1,44 @@
 ---
-title: "Notes"
+title: "`r params$title`"
 author: "Ryan Heslin"
-date: "`r format(Sys.Date(), '%B %d, %Y')`"
-output: 
-  pdf_document:
-    highlight: "kate"
-    df_print: "kable"
+date: "`r format(Sys.Date(), '%B %e, %Y')`"
+header-includes:
+  - \setlength{\parindent}{2em}
+  - \setlength{\parskip}{2em}
+params:
+    title: "Taking the DuBois Challenge"
+output:
+    github_document:
+      df_print: "kable"
 ---
 
- <!-- Standard custom LaTeX commands -->
-\newcommand{\abcd}{\begin{bmatrix}a&b\\
-c&d\end{bmatrix}}
-\newcommand{\m}[1]{\begin{bmatrix}#1\end{bmatrix}}
-
-\newcommand{\vect}[1]{\begin{pmatrix}#1\end{pmatrix}}
-
-\newcommand{\meq}[1]{\begin{split}#1\end{split}}
-
-\newcommand{\bym}[1]{#1\times{m}}
-
-\newcommand{\nby}[1]{n\times{#1}}
-
-\newcommand{\subsp}[2]{\Bigg\{\begin{bmatrix}#1\end{bmatrix}:#2\Bigg\}}
-
-\newcommand{\proj}[2]{\text{proj}_#1(#2)}
-
-\newcommand{\refl}[2]{\text{refl}_#1(#2)}
-
-\newcommand{\sumn}{\sum_{i=1}^n}
-
-<!-- % 1: term 1 -->
-<!-- % 2: subscript 1 -->
-<!-- % 3: term 2 -->
-<!-- % 4: subscript 2 -->
-<!-- % 5. operation -->
-\newcommand{\dotsn}[5]{#1_{1}#3_{1}#5{#1}_{2}#3_{2}{#5}\dots{#5}#1_{#2}#3_{#4}}
-
-\newcommand{\rot}[1]{
-\begin{bmatrix}
-\cos{(#1)} & -\sin{(#1)}\\
-
-\sin{(#1)} & \cos{(#1)}\\
-\end{bmatrix}
-}
 ```{r setup, include=FALSE}
-
 knitr::opts_chunk$set(
   echo = TRUE,
   comment = "",
   fig.pos = "",
+  fig.path = file.path(
+    "../figure",
+    tools::file_path_sans_ext(
+      knitr::current_input()
+    ),
+    "/"
+  ),
+  message = FALSE,
+  tidy = "styler",
   warning = FALSE,
-  tidy = TRUE,
   fig.align = "center",
   highlight = TRUE
 )
-
-library(tidyverse)
-library(rlang)
 ```
 
-
+This is an attempt to replicate data visualizations created by the great writer and sociologist W.E.B. DuBois.
 ```{r}
+library(tidyverse)
 library(tidytuesdayR)
 library(ggplot2)
 
-dubois <-  tt_load(2021, week = 8)
+dubois <- tt_load(2021, week = 8)
 ```
 
 ```{r}
@@ -75,19 +49,24 @@ head(freed_slaves)
 ```{r}
 labs <- sprintf("%.0f%%", rep(dubois$freed_slaves$Free, each = 2))
 labs_coords <-
-  c(rep(dubois$freed_slaves$Slave[-nrow(dubois$freed_slaves)], each = 2),
-    rep (dubois$freed_slaves$Slave[nrow(dubois$freed_slaves) - 1], 2))
+  c(
+    rep(dubois$freed_slaves$Slave[-nrow(dubois$freed_slaves)], each = 2),
+    rep(dubois$freed_slaves$Slave[nrow(dubois$freed_slaves) - 1], 2)
+  )
 p1 <-
-  freed_slaves %>% pivot_longer(c(Slave, Free), values_to = "Number", names_to = "Status") %>%
+  freed_slaves %>%
+  pivot_longer(c(Slave, Free), values_to = "Number", names_to = "Status") %>%
   ggplot(aes(
     x = Year,
     y = Number,
     fill = Status,
     alpha = Status
   )) +
-  stat_summary(geom = "area",
-               position = "fill",
-               fun = "identity") +
+  stat_summary(
+    geom = "area",
+    position = "fill",
+    fun = "identity"
+  ) +
   geom_vline(
     aes(xintercept = Year),
     color = "black",
@@ -131,7 +110,7 @@ p1 <-
 ggsave("dubois1.png", plot = p1, path = "../outputs/plots")
 ```
 ```{r}
-factor_levels = c(
+factor_levels <- c(
   "Agriculture, Fisheries and Mining",
   "Domestic and Personal Service",
   "Manufacturing and Mechanical Industries",
@@ -139,11 +118,13 @@ factor_levels = c(
   "Professions"
 )
 gap <- 20
-occupation <- dubois$occupation %>% group_by(Group) %>%
+occupation <- dubois$occupation %>%
+  group_by(Group) %>%
   mutate(
     Occupation = factor(Occupation,
-                        levels = factor_levels,
-                        ordered = TRUE),
+      levels = factor_levels,
+      ordered = TRUE
+    ),
     ord = order(Occupation, factor_levels)
   ) %>%
   arrange(ord) %>%
@@ -151,9 +132,7 @@ occupation <- dubois$occupation %>% group_by(Group) %>%
     xmax = gap + cumsum(Percentage * ((100 - (
       gap * 2
     )) / 100)) + (100 * (cur_group_id() - 1)),
-    xmin = lag(xmax, default = gap  + (100 * (cur_group_id(
-      
-    ) - 1))),
+    xmin = lag(xmax, default = gap + (100 * (cur_group_id() - 1))),
     ymin = 0,
     ymax = 1,
     label_x = xmin + (xmax - xmin) / 2
@@ -161,8 +140,10 @@ occupation <- dubois$occupation %>% group_by(Group) %>%
   ungroup()
 
 key <-
-  setNames(c("red", "yellow", "blue", "#DFBF9F", "gray"),
-           levels(occupation$Occupation))
+  setNames(
+    c("red", "yellow", "blue", "#DFBF9F", "gray"),
+    levels(occupation$Occupation)
+  )
 circle_data <- tibble(
   color = key,
   x = c(5, 90, 195, 110, 100),
@@ -205,10 +186,11 @@ p2 <- occupation %>%
     label = paste0(Percentage, "%"),
     x = label_x,
     y = .9,
-    
   ), size = 2.5) +
-  coord_polar(clip = "off",
-              start = -pi / 2) +
+  coord_polar(
+    clip = "off",
+    start = -pi / 2
+  ) +
   xlim(c(0, 200)) +
   scale_fill_manual(values = key) +
   geom_point(
@@ -230,17 +212,11 @@ p2 <- occupation %>%
     axis.text = element_blank(),
     axis.title = element_blank(),
     axis.ticks = element_blank(),
-    panel.grid  = element_blank(),
+    panel.grid = element_blank(),
     panel.background = element_rect(fill = "white"),
     plot.title.position = "plot",
     plot.title = element_text(hjust = .5, face = "bold")
-  ) 
+  )
 
-ggsave("dubois2.png", plot = p2, "../outputs/plots/")
+ggsave("dubois2.png", plot = p2, path = "../outputs/plots/")
 ```
-
-
-
-
-
-

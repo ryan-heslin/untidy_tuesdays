@@ -1,28 +1,38 @@
 ---
-title: "Tidy Tuesday: Billboard Hot 100"
+title: "`r params$title`"
 author: "Ryan Heslin"
 date: "`r format(Sys.Date(), '%B %e, %Y')`"
+header-includes:
+  - \setlength{\parindent}{2em}
+  - \setlength{\parskip}{2em}
+params:
+    title: "Billboard Charts Analysis"
 output:
-  pdf_document:
-    highlight: "kate"
-    df_print: "kable"
+    github_document:
+      df_print: "kable"
 ---
 
 ```{r setup, include=FALSE}
+library(tidyverse)
+
 knitr::opts_chunk$set(
   echo = TRUE,
   comment = "",
   fig.pos = "",
+  fig.path = file.path(
+    "../figure",
+    tools::file_path_sans_ext(
+      knitr::current_input()
+    ),
+    "/"
+  ),
   message = FALSE,
   tidy = "styler",
   warning = FALSE,
   fig.align = "center",
   highlight = TRUE
 )
-
-library(tidyverse)
 ```
-
 
 ```{r, cache = TRUE}
 tuesdata <- tidytuesdayR::tt_load("2021-09-14")
@@ -86,7 +96,7 @@ billboard |>
   nrow()
 ```
 
-Not suprisingly, Christmas songs come back again...and again..and again.
+Not surprisingly, Christmas songs come back again ... and again ... and again.
 ```{r}
 billboard |>
   group_by(song) |>
@@ -96,7 +106,6 @@ billboard |>
 ```
 
 Who spent the longest on the chart?
-
 
 ```{r}
 billboard |>
@@ -109,7 +118,6 @@ billboard |>
 
 How about weeks _per song_ in the top 10?
 
-
 ```{r}
 billboard |>
   filter(week_position > -10) |>
@@ -120,9 +128,7 @@ billboard |>
   head(n = 10)
 ```
 
-
 # Plotting
-
 
 ```{r}
 top_artists <- billboard |>
@@ -140,11 +146,20 @@ billboard |>
   slice_max(week_position, n = 1) |>
   ungroup() |>
   mutate(week_id = lubridate::mdy(week_id)) |>
-  ggplot(aes(x = week_id, y = 101 - week_position, color = performer, fill = performer)) +
+  ggplot(aes(
+    x = week_id, y = 101 - week_position,
+    color = performer, fill = performer
+  )) +
   geom_area(alpha = .5) +
-  scale_y_continuous(breaks = c(100, 75, 50, 25, 1), labels = c(1, 25, 50, 25, 100)) +
+  scale_y_continuous(
+    breaks = c(100, 75, 50, 25, 1),
+    labels = c(1, 25, 50, 25, 100)
+  ) +
   facet_wrap(~performer, ncol = 2, scales = "free_x") +
-  labs(title = "Artists by Peak Week Chart Position", y = "Highest Week Position") +
+  labs(
+    title = "Artists by Peak Week Chart Position",
+    y = "Highest Week Position"
+  ) +
   theme(legend.position = "none")
 ```
 
@@ -157,7 +172,10 @@ combined |>
   select(-c(mode, key, time_signature)) |>
   group_by(Year) |>
   summarize(across(danceability:last_col(), mean, na.rm = TRUE)) |>
-  pivot_longer(danceability:last_col(), names_to = "Feature", values_to = "Value") |>
+  pivot_longer(danceability:last_col(),
+    names_to = "Feature",
+    values_to = "Value"
+  ) |>
   ggplot(aes(x = Year, y = Value, color = Feature)) +
   geom_line() +
   facet_wrap(~Feature, nrow = 2, scales = "free") +
@@ -176,7 +194,14 @@ longest_streak <- function(subscript, which = c("first", "last", "all")) {
     "last" = max,
     "all" = c
   )
-  unlist(with(rle(subscript), mapply(rep, values & seq_along(lengths) %in% comparator(which(lengths == max(lengths[values]))), lengths, SIMPLIFY = FALSE)))
+  unlist(with(
+    rle(subscript),
+    mapply(rep, values & seq_along(lengths) %in%
+      comparator(which(lengths == max(lengths[values]))),
+    lengths,
+    SIMPLIFY = FALSE
+    )
+  ))
 }
 ```
 
@@ -198,7 +223,9 @@ streaks <- billboard |>
   ) |>
   filter(longest_streak) |>
   ungroup() |>
-  filter(performer %in% names(sort(table(performer), decreasing = TRUE)[1:10])) |>
+  filter(performer %in% names(sort(table(performer),
+    decreasing = TRUE
+  )[1:10])) |>
   mutate(y = as.integer(as.factor(performer)))
 ```
 

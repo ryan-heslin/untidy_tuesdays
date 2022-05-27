@@ -1,17 +1,44 @@
 ---
-title: 'Unidy Tuesdays: Books and Ships'
+title: "`r params$title`"
 author: "Ryan Heslin"
-date: "`r Sys.Date()`"
-output: html_document
+date: "`r format(Sys.Date(), '%B %e, %Y')`"
+header-includes:
+  - \setlength{\parindent}{2em}
+  - \setlength{\parskip}{2em}
+params:
+    title: "Books Analysis"
+output:
+    github_document:
+      df_print: "kable"
 ---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(
+  echo = TRUE,
+  comment = "",
+  fig.pos = "",
+  fig.path = file.path(
+    "../figure",
+    tools::file_path_sans_ext(
+      knitr::current_input()
+    ),
+    "/"
+  ),
+  message = FALSE,
+  tidy = "styler",
+  warning = FALSE,
+  fig.align = "center",
+  highlight = TRUE
+)
+```
+
 # The Best Books?
+
 ```{r, message = FALSE, warning=FALSE}
 library(tidyverse)
 library(rvest)
 library(lubridate)
-
-my_funs <- gen_funs()
-attach(my_funs)
 ```
 
 I scraped a list found on goodreads.com claiming to definitively rank the best books. First I obtain the raw text.
@@ -21,16 +48,14 @@ sel <-
   ".bookTitle span , .authorName span, .uitext a, #loading_link_555587, .minirating"
 
 urls <- paste0("https://www.goodreads.com/list/show/1.Best_Books_Ever?page=", pages)
-raw <- map(urls, ~read_html(.x) %>% 
-            html_nodes(sel) %>% 
-            html_text()
-)
-
+raw <- map(urls, ~ read_html(.x) %>%
+  html_nodes(sel) %>%
+  html_text())
 ```
 
 Next I match the values of the text vector to the correct field and pivot into a tibble.
 ```{r}
-books <- tibble( text = unlist(raw), field = rep(c("title", "author", "rating", "score", "voted"), times = length(text) /5), rank = cumsum(field == "title")) %>% 
+books <- tibble(text = unlist(raw), field = rep(c("title", "author", "rating", "score", "voted"), times = length(text) / 5), rank = cumsum(field == "title")) %>%
   pivot_wider(values_from = text, names_from = "field")
 ```
 
@@ -45,9 +70,11 @@ extracts <-
   )
 
 books <-
-  books %>% separate(rating,
-                     sep = " [^[a-zA-Z0-9.] ",
-                     into = c("avg_rating", "num_ratings")) %>%
+  books %>%
+  separate(rating,
+    sep = " [^[a-zA-Z0-9.] ",
+    into = c("avg_rating", "num_ratings")
+  ) %>%
   mutate(
     across(names(extracts), ~ str_extract(.x, extracts[[cur_column()]])),
     across(-c(title, author), ~ str_remove_all(.x, ",") %>% as.numeric()),
@@ -57,23 +84,63 @@ books <-
 
 The number of ratings has a somewhat skewed distribution.
 ```{r, fig.align='center'}
-bplot <- partial(ggplot, data = !!quote(books))
-my_theme()
+autolab_plot <- function(call, mapping, ...) {
+  call <- rlang::enexpr(call)
+  label_plots(
+    plot = eval(call, envir = parent.frame()), mapping = mapping,
+    eval = TRUE, ...
+  )
+}
 
-mapping <- list(title = "Title", author = "Author", avg_rating = "Average Rating", num_ratings = "Number of Ratings")
-autolab_plot(call = bplot(aes(x = num_ratings)) + scale_x_log10() + 
-               geom_histogram(fill = "skyblue", col = "grey93", bins = 40), mapping, y = "Density")
+label_plots <- function(plot, mapping, eval = TRUE, ...) {
+  if (!"ggplot" %in% class(plot)) {
+    stop("Not a ggplot object")
+  }
+  vars <- plot$labels
+  params <- mapping[names(mapping) %in% vars]
+  vars <- setNames(params[match(vars, names(params))], names(plot$labels)) %>%
+    compact()
+  out <- make_labels(mapping = vars, ...)
+  if (eval) {
+    return(plot + out())
+  }
+  out
+}
+
+make_labels <- function(mapping = NULL, ...) {
+  force(mapping)
+  partial(labs, !!!mapping, ..., ... = )
+}
+
+bplot <- partial(ggplot, data = !!quote(books))
+
+mapping <- list(
+  title = "Title",
+  author = "Author", avg_rating = "Average Rating",
+  num_ratings = "Number of Ratings"
+)
+autolab_plot(call = bplot(aes(x = num_ratings)) + scale_x_log10() +
+  geom_histogram(
+    fill = "skyblue",
+    col = "grey93", bins = 40
+  ), mapping, y = "Density")
 ```
 
 Which books had unusually low ratios of ratings to scores?
-Do books in series get more votes than standalone titles? WIth so many outliers it's ahrd to tell.
+Do books in series get more votes than standalone titles? With so many outliers it's hard to tell.
 ```{r, fig.align='center'}
 books %>%
-  slice_head(n = 500) %>% 
-  mutate(Series = factor(if_else(str_detect(title, "#\\d"), "Series", "Standalone"))) %>%
+  slice_head(n = 500) %>%
+  mutate(Series = factor(if_else(str_detect(
+    title,
+    "#\\d"
+  ), "Series", "Standalone"))) %>%
   ggplot(aes(x = Series, y = voted, fill = Series)) +
   geom_boxplot() +
-  labs(y = "Votes", x = "", title = "Vote Distribution for Series and Non-Series") +
+  labs(
+    y = "Votes", x = "",
+    title = "Vote Distribution for Series and Non-Series"
+  ) +
   theme(legend.position = "none")
 ```
 
@@ -85,22 +152,21 @@ I start by reading table values and names separately, then combining.
 ```{r}
 obj <- read_html("https://en.wikipedia.org/wiki/List_of_United_States_Navy_losses_in_World_War_II")
 
-tabs <- html_elements(obj, xpath = "/html/body/div[3]/div[3]/div[5]/div[1]/table") %>% 
+tabs <- html_elements(obj, xpath = "/html/body/div[3]/div[3]/div[5]/div[1]/table") %>%
   html_table()
 
-classes <- html_nodes(obj, css = "h3 .mw-headline") %>% 
+classes <- html_nodes(obj, css = "h3 .mw-headline") %>%
   html_text()
 
-tabs <- setNames(tabs[-1], classes)
-names(tabs)[[42]] <- "Coast Guard"
+tabs <- tabs[-(1:2)]
+names(tabs) <- classes
+names(tabs)[[length(tabs) - 2]] <- "Coast Guard"
 ```
 
 I create a tibble from the data.
 ```{r}
-tabs[[1]]$Class <- NULL
-
-losses <- tabs %>% 
-  map(~mutate(.x, Date =as.character(Date))) %>% 
+losses <- tabs %>%
+  map(~ mutate(.x, Date = as.character(.data[["Date"]]))) %>%
   bind_rows(.id = "Type")
 ```
 
@@ -116,8 +182,8 @@ losses <- losses %>% mutate(
   Role =
     factor(
       case_when(
-        match(Type, classes) %in% 1:5 ~ "Major Combatant",
-        match(Type, classes) %in% 3:23  ~ "Minor Combatant",
+        Type %in% as.character(1:5) ~ "Major Combatant",
+        Type %in% as.character(3:22) ~ "Minor Combatant",
         TRUE ~ "Auxiliary"
       ),
       ordered = TRUE,
@@ -129,62 +195,60 @@ losses <- losses %>% mutate(
 
 The worst months for losses were January 1942 (when the Imperial Japanese Navy routed Allied forces across the Pacific), and June 1944 (the month of the Normandy landings).
 ```{r, fig.align='center'}
-losses %>% 
-  filter(!is.na(Date)) %>% 
-  mutate(Date = round_date(Date, unit = "month")) %>% 
-  group_by(Date) %>% 
-  summarize("Month Losses" = n()) %>% 
+losses %>%
+  filter(!is.na(Date), year(Date) < 1946) %>%
+  mutate(Date = round_date(Date, unit = "month")) %>%
+  group_by(Date) %>%
+  summarize("Month Losses" = n()) %>%
   ggplot(aes(x = Date, y = `Month Losses`)) +
-  scale_x_date(date_breaks = "1 year", date_minor_breaks = "1 month", date_labels = "%Y" ) +
+  scale_x_date(date_breaks = "1 year", date_minor_breaks = "1 month", date_labels = "%Y") +
   geom_area(fill = "blue", col = "gold", alpha = .7) +
-  labs(title = "Losses by Month", x= "")
+  labs(title = "Losses by Month", x = "")
 
 losses %>%
-  filter(!is.na(Date)) %>% 
-  mutate(Year = year(Date), Month = month(Date)) %>% 
-  count(Year, Month, name = "Losses") %>% 
-  arrange(-Losses) %>% 
+  filter(!is.na(Date)) %>%
+  mutate(Year = year(Date), Month = month(Date)) %>%
+  count(Year, Month, name = "Losses") %>%
+  arrange(-Losses) %>%
   knitr::kable()
-              
 ```
 
 Auxiliaries dominated losses in 1942, while by 1945 the biggest category was minor combatants, exposed to constant attack at Iwo Jima and Okinawa.
 ```{r, fig.align='center'}
-losses %>% 
-  mutate(Year = year(Date))  %>% 
-  filter(Year %in% c("1942", "1945")) %>% 
-  group_by(Role, Year) %>% 
+losses %>%
+  mutate(Year = year(Date)) %>%
+  filter(Year %in% c("1942", "1945")) %>%
+  group_by(Role, Year) %>%
   summarize(Losses = n()) %>%
-  ungroup() %>% 
-  group_by(Year) %>% 
-  mutate(Proportion = Losses / sum(Losses)) %>% 
-  ggplot(aes(x =Role, y = Proportion, fill = Role)) +
+  ungroup() %>%
+  group_by(Year) %>%
+  mutate(Proportion = Losses / sum(Losses)) %>%
+  ggplot(aes(x = Role, y = Proportion, fill = Role)) +
   geom_col() +
   scale_y_continuous(labels = scales::percent_format()) +
   facet_wrap(Year ~ .) +
-  labs(title= "Loss Composition in 1942 vs. 1945", x = "")+
-  guides( fill = guide_legend(title.position = "top", label.position = "bottom")) +
-  theme(legend.position = "bottom", axis.text.x = element_blank(), legend.margin = margin(t = .5, r = 1, l =1, b = .5), legend.box.margin = margin(t = -3), legend.box.spacing = unit(.001, "cm"))
+  labs(title = "Loss Composition in 1942 vs. 1945", x = "") +
+  guides(fill = guide_legend(title.position = "top", label.position = "bottom")) +
+  theme(legend.position = "bottom", axis.text.x = element_blank(), legend.margin = margin(t = .5, r = 1, l = 1, b = .5), legend.box.margin = margin(t = -3), legend.box.spacing = unit(.001, "cm"))
 ```
 
 This plot shows the composition of losses by role for each month
 ```{r, fig.align='center'}
-losses %>% 
-  filter(!is.na(Date) & year(Date) != 1946) %>% 
-  mutate(Year = year(Date), Month = factor(month.name[month(Date)], levels = month.name)) %>% 
-  count(Year, Month, Role, .drop = FALSE) %>% 
-  group_by(Year, Month) %>% mutate(n = as.double(cumsum(n)) %>% if_else(. == 0, NA_real_, .)) %>% 
-  ungroup() %>% 
-  mutate(dummy = 0) %>% 
-  ggplot(aes(x = dummy, y = dummy, size = n , alpha = Role)) +
+losses %>%
+  filter(!is.na(Date) & year(Date) != 1946) %>%
+  mutate(Year = year(Date), Month = factor(month.name[month(Date)],
+    levels = month.name
+  )) %>%
+  count(Year, Month, Role, .drop = FALSE) %>%
+  group_by(Year, Month) %>%
+  mutate(n = as.double(cumsum(n)) %>% if_else(. == 0, NA_real_, .)) %>%
+  ungroup() %>%
+  mutate(dummy = 0) %>%
+  ggplot(aes(x = dummy, y = dummy, size = n, alpha = Role)) +
   geom_point(color = "blue") +
-  coord_fixed()+
+  coord_fixed() +
   scale_alpha_manual(breaks = c("Major Combatant", "Minor Combatant", "Auxiliary"), values = c(1, .6, .2)) +
   facet_grid(Year ~ Month) +
-  theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank(), panel.grid.major.x = element_blank(), strip.text = element_text(hjust = .05), strip.text.x = element_text(size = 9), panel.spacing = unit(0, "cm"), legend.position = "bottom", legend.margin = margin(t = 1, r = 1, l =1, b = .5), legend.box.margin = margin(t = -5)) +
+  theme(axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank(), panel.grid.major.x = element_blank(), strip.text = element_text(hjust = .05), strip.text.x = element_text(size = 9), panel.spacing = unit(0, "cm"), legend.position = "bottom", legend.margin = margin(t = 1, r = 1, l = 1, b = .5), legend.box.margin = margin(t = -5)) +
   labs(x = "", y = "", size = "Month Losses", title = "Composition of Losses by Year and Month")
-           
 ```
-
-
-
