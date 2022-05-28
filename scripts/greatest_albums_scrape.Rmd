@@ -13,9 +13,10 @@ classic rock.
 I don't place too much stock in these kinds of rankings, but this one does provide
 an interesting web scraping and modeling challenge.
 ```{r}
-genres_raw <- read_csv("../data/albumlist.csv", locale = locale(encoding = "macroman"))
-genres_raw %>% count(Album,sort = TRUE) %>% 
-  filter(n >1)
+genres_raw <- read_csv("../data/albumlist.csv")
+genres_raw %>%
+  count(Album, sort = TRUE) %>%
+  filter(n > 1)
 ```
 
 It seems there are three Greatest Hits albums (not surprising) and a second
@@ -30,17 +31,24 @@ genres <- rename_with(genres_raw, str_to_lower)
 
 acylam from the `discoRd` sever helped me configure the driver and suggested code for the page scraping.
 
-To reproduce this analysis as is, run a remote firefox server in a docker
+A previous version of this analysis used a remote firefox server in a docker
 container mapped to port 4445 by pasting this into a terminal:
 
 `docker run -d -p 4445:4444 selenium/standalone-firefox:2.53.1`
 
-```{r, results = "hide"}
-driver <- remoteDriver(remoteServerAddr = "localhost",
-               port= 4445L,
-               browserName="firefox")
+but you can reproduce it more easily simply by installing Selenium and geckodriver.
 
-driver$open()
+```{r, results = "hide"}
+library(RSelenium)
+driver <- rsDriver(browser = "firefox", port = 4415L)
+# driver <- remoteDriver(
+# remoteServerAddr = "localhost",
+# port = 4445L,
+# browserName = "firefox"
+# )
+
+# driver$open()
+driver <- driver$client
 ```
 
 I define some functions to simplify scraping.
@@ -50,23 +58,21 @@ scrape_page <- function(driver,
                         wait = 5L,
                         sel) {
   driver$navigate(url)
-  
-  Sys.sleep(wait) 
+
+  Sys.sleep(wait)
   html_raw <- driver$getPageSource()[[1]]
   cat("Scraping", url, "\n")
   html2text(html_raw, sel)
-  
 }
 
 html2text <- function(html_obj, sel, type = "css") {
-
   html <- read_html(html_obj)
-  purrr::map(sel, get_html_elements, html = html) 
+  purrr::map(sel, get_html_elements, html = html)
 }
 
 get_html_elements <- function(html, sel) {
-    html_text(html_elements(x = html, css = sel))
-  }
+  html_text(html_elements(x = html, css = sel))
+}
 ```
 
 ```{r, cache = TRUE}
@@ -84,12 +90,14 @@ time as the rest of the script.
 
 ```{r, echo = FALSE}
 sel <-
-  c(artist_album = ".c-gallery-vertical-album__title",
+  c(
+    artist_album = ".c-gallery-vertical-album__title",
     label_year = "#pmc-gallery-vertical p:nth-child(1) em",
-    description = "#pmc-gallery-vertical p:nth-child(2)")
+    description = "#pmc-gallery-vertical p:nth-child(2)"
+  )
 
 pages <- tibble(link = links, sel = list(sel))
-lapply(c(1, 3, 5), function(x) pages$sel[[x]][["description"]] <<-  paste(":nth-child(43) p ,", sel[["description"]]))
+lapply(c(1, 3, 5), function(x) pages$sel[[x]][["description"]] <<- paste(":nth-child(43) p ,", sel[["description"]]))
 pages$sel[[3]][["label_year"]] <- c(label_year = "#pmc-gallery-vertical p:nth-child(1) em:nth-child(1)")
 ```
 
@@ -100,5 +108,5 @@ text_raw <- mapply(function(link, sel) scrape_page(driver, link, wait = 2.5, sel
 ```
 
 ```{r}
-driver$close()
+tryCatch(driver$close(), error = function() {})
 ```
